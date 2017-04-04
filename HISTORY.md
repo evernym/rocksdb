@@ -3,6 +3,7 @@
 ### New Features
 * DB::ResetStats() to reset internal stats.
 * ldb add option --try_load_options, which will open DB with its own option file.
+* New option enable_pipelined_write which may improve write throughput in case writing from multiple threads and WAL enabled .
 
 ## 5.4.0 (04/11/2017)
 ### Public API Change
