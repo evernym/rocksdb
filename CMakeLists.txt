@@ -25,6 +25,10 @@
 # 5. And release mode (/m[:<N>] is also supported)
 #        msbuild rocksdb.sln /p:Configuration=Release
 #
+# NOTE:  In case you need snappy enabled and have snappy repo for Windows with CMakeList.txt
+#        you can specify WITH_SNAPPY_GIT=<snappy_git_repo.git> instead of paths inside thirdparty.inc file
+#        sample command: cmake -G "Visual Studio 14 Win64" -DGFLAGS=1 -DWITH_SNAPPY_GIT=https://some/path/to/snappy.git ...
+#
 # Linux:
 #
 # 1. Install a recent toolchain such as devtoolset-3 if you're on a older distro. C++11 required.
@@ -43,6 +47,26 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
 if(MSVC)
   include(${CMAKE_CURRENT_SOURCE_DIR}/thirdparty.inc)
+  option(WITH_SNAPPY_GIT "Build snappy from git repo that support cmake" )
+  if (WITH_SNAPPY_GIT)
+    include(ExternalProject)
+    ExternalProject_Add(SNAPPY_GIT
+                        PREFIX                  snappy_git
+                        GIT_REPOSITORY          ${WITH_SNAPPY_GIT}
+                        CMAKE_GENERATOR         ${CMAKE_GENERATOR}
+                        CMAKE_GENERATOR_TOOLSET ${CMAKE_GENERATOR_TOOLSET}
+                        LOG_DOWNLOAD            1
+                        LOG_UPDATE              1
+                        LOG_CONFIGURE           1
+                        LOG_BUILD               1
+                        INSTALL_COMMAND         ${CMAKE_COMMAND} -E echo NoInstallStep
+                        TEST_BEFORE_INSTALL     0
+                        TEST_AFTER_INSTALL      0)
+    ExternalProject_Get_Property(SNAPPY_GIT SOURCE_DIR BINARY_DIR)
+    add_definitions(-DSNAPPY)
+    include_directories(${SOURCE_DIR})
+    LINK_LIBRARIES(${BINARY_DIR}/$<CONFIG>/snappylib.lib)
+  endif()
 else()
   option(WITH_JEMALLOC "build with JeMalloc" OFF)
   if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -552,6 +576,11 @@ if(WIN32)
     set_target_properties(${ROCKSDB_IMPORT_LIB} PROPERTIES
       COMPILE_FLAGS "/Fd${CMAKE_CFG_INTDIR}/${ROCKSDB_IMPORT_LIB}.pdb")
   endif()
+endif()
+
+if (WITH_SNAPPY_GIT)
+  add_dependencies(${ROCKSDB_STATIC_LIB} SNAPPY_GIT)
+  add_dependencies(${ROCKSDB_IMPORT_LIB} SNAPPY_GIT)
 endif()
 
 option(WITH_JNI "build with JNI" OFF)
